@@ -42,7 +42,7 @@ InstructCMP
 $ cd InstructCMP
 $ python src/run.py --model_size "13" \
                     --batch_size 10 \
-                    --data_name:str "Google" \
+                    --data_name "Google" \
                     --split "test"
 ```
 
