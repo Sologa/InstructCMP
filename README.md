@@ -47,7 +47,6 @@ $ python src/run.py --model_size "13" \
 ```
 
 # Evaluation
-<<<<<<< HEAD
 The metrics used in this work are in [evaluation_metrics](https://github.com/JuseonDo/InstructCMP/evaluation).
 
 ```python
@@ -55,9 +54,6 @@ post_processed_outputs = generated_output_post_processing(generated_text)
 result = evaluate(targets, sources, post_processed_outputs)
 ```
 
-=======
-The metrics used in this work are listed in [evaluation_metrics](https://github.com/JuseonDo/InstructCMP/blob/main/src/evaluate_utils/evaluate_functions.py). For each metric, we have steps.txt which presents the steps to setup and run the metric.
->>>>>>> 4c1a0063f8e500fcae9f042ad90e4838242de7ed
 # Contact
 If you have any questions about this work, please contact **Juseon-Do** using the following email addresses: **dojuseon@gmail.com** or **doju00@naver.com**. 
 
