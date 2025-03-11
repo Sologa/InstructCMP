@@ -36,12 +36,24 @@ InstructCMP
 └── run.py
 ```
 
-## Models
+## Run
 
-
+```
+$ cd InstructCMP
+$ python src/run.py --model_size "13" \
+                    --batch_size 10 \
+                    --data_name:str "Google" \
+                    --split "test"
+```
 
 # Evaluation
-The metrics used in this work are listed in [evaluation_metrics](https://github.com/JuseonDo/InstructCMP/evaluation). For each metric, we have steps.txt which presents the steps to setup and run the metric.
+The metrics used in this work are in [evaluation_metrics](https://github.com/JuseonDo/InstructCMP/evaluation).
+
+```python
+post_processed_outputs = generated_output_post_processing(generated_text)
+result = evaluate(targets, sources, post_processed_outputs)
+```
+
 # Contact
 If you have any questions about this work, please contact **Juseon-Do** using the following email addresses: **dojuseon@gmail.com** or **doju00@naver.com**. 
 

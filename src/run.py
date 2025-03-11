@@ -1,7 +1,9 @@
+import sys
+sys.path.append('InstructCMP/')
+
+import os
 import fire
 import torch
-from tqdm import  tqdm
-from typing import List,Dict,Tuple
 from detokenize.detokenizer import detokenize
 from transformers import BitsAndBytesConfig
 from transformers import(
@@ -10,11 +12,14 @@ from transformers import(
 )
 
 from src.inference_utils import inference
-from src.utils import get_template, apply_template
+from src.utils import get_template, apply_template, get_dataset
+from src.evaluate_utils import generated_output_post_processing, evaluate
 
 def main(
         model_size:str = "13",
         batch_size:int = 10,
+        data_name:str = "Google",
+        split:str = "test"
 ):  
     model_name = f"meta-llama/Llama-2-{model_size}b-chat-hf"
 
@@ -29,6 +34,7 @@ def main(
             model_name,
             device_map="auto",
             quantization_config=nf4_config,
+            cache_dir="/data/huggingface_models/"
         )
     model.config.pad_token_id = model.config.eos_token_id
     model.eval()
@@ -37,16 +43,24 @@ def main(
     tokenizer = AutoTokenizer.from_pretrained(model_name,
                                               use_fast=True,
                                               padding_side="left",
+                                              cache_dir="/data/huggingface_models/"
                                               )
     tokenizer.pad_token = tokenizer.eos_token
 
     template = get_template()
-    instances = [
-        {
-            "src": "sentence",
-            "del_len": 10
-        }
-    ]
+
+    os.environ["dataset_path"] = f"dataset/{data_name}/{data_name}_{split}.jsonl"
+    sources, targets = get_dataset()
+    
+    instances = []
+    for src, tgt in zip(sources, targets):
+        instances.append(
+            {
+                "src": src,
+                "del_len": len(src.split()) - len(tgt.split())
+            }
+        )
+
     prompts = apply_template(instances, template)
 
     generated_text = inference(
@@ -57,6 +71,9 @@ def main(
         max_new_tokens=200,
         do_sample=False,
     )
+
+    post_processed_outputs = generated_output_post_processing(generated_text)
+    result = evaluate(targets, sources, post_processed_outputs)
 
 if __name__ == '__main__':
     with torch.no_grad():

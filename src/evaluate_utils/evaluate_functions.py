@@ -5,12 +5,12 @@ from nltk import word_tokenize
 import json
 from typing import List,Tuple,Dict
 
-def post_processing(outputs):
+def generated_output_post_processing(outputs):
     return [extract_summary(output) for output in outputs]
 
 
 def extract_summary(sentence:str):
-    sentence = sentence.strip().split("[[SEP]]")
+    sentence = sentence.strip().split("\n")
     while len(sentence) > 0:
         summary = sentence.pop(0).strip()
         s = summary.replace("\'","").replace("\"","").replace("`","").replace("”","").replace("’ s","").strip()
