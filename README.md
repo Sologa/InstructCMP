@@ -1,7 +1,7 @@
 # InstructCMP: Length Control in Sentence Compression through Instruction-based Large Language Models
-
+* Accepted to ACL 2024 Findings Long
 * Authors: Juseon-Do, Jingun Kwon, Hidetaka Kamigaito, Manabu Okumura
-* Paper Link: [InstructCMP](https://arxiv.org/abs/2406.11097)
+* Paper Link: [InstructCMP](https://aclanthology.org/2024.findings-acl.532/)
 
 
 ## InstructCMP Dataset
