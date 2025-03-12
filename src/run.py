@@ -50,6 +50,11 @@ def main(
     os.environ["dataset_path"] = f"dataset/{data_name}/{data_name}_{split}.jsonl"
     sources, targets = get_dataset()
     
+    if "BNC" in data_name or "Broadcast" in data_name:
+        print("Detokenizing...")
+        targets = [detokenize(tgt.split()) for tgt in targets]
+        sources = [detokenize(src.split()) for src in sources]
+
     instances = []
     for src, tgt in zip(sources, targets):
         instances.append(

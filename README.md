@@ -17,11 +17,11 @@ This paper presents **InstructCMP**, an instruction-based method for sentence co
 ### 1. Clone the Repository
 ```
 $ git clone https://github.com/JuseonDo/InstructCMP
-$ cd InstructCMP
 ```
 
 ### 2. Run
 ```
+$ cd InstructCMP
 $ python src/run.py --model_size "13" \
                     --batch_size 10 \
                     --data_name "Google" \
