@@ -1,6 +1,4 @@
 import sys
-sys.path.append('InstructCMP/')
-
 import os
 import fire
 import torch
