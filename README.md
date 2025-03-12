@@ -16,7 +16,7 @@ This paper presents **InstructCMP**, an instruction-based method for sentence co
 ## 🚀 Getting Started
 ### 1. Clone the Repository
 ```
-$ git clone https://github.com/JuseonDo/InstructCMP
+$ git clone https://github.com/JuseonDo/InstructCMP.git
 ```
 
 ### 2. Run
