@@ -3,6 +3,7 @@
 * Authors: Juseon-Do, Jingun Kwon, Hidetaka Kamigaito, Manabu Okumura
 * Paper Link: [InstructCMP](https://aclanthology.org/2024.findings-acl.532/)
 
+![InstructCMP](images/your_image.png)
 
 ## InstructCMP Dataset
 Dataset folder has the following structure:
