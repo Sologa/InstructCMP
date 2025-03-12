@@ -50,7 +50,7 @@ def main(
     os.environ["dataset_path"] = f"dataset/{data_name}/{data_name}_{split}.jsonl"
     sources, targets = get_dataset()
     
-    if "BNC" in data_name or "Broadcast" in data_name:
+    if "BNC".lower() in data_name.lower() or "Broadcast".lower() in data_name.lower():
         print("Detokenizing...")
         targets = [detokenize(tgt.split()) for tgt in targets]
         sources = [detokenize(src.split()) for src in sources]
