@@ -39,19 +39,6 @@ def build_prompts(sources, targets):
     return apply_template(instances, template)
 
 
-def extract_text_from_response(payload: dict) -> str:
-    text = payload.get("output_text")
-    if text:
-        return text.strip()
-
-    collected = []
-    for item in payload.get("output", []):
-        for content in item.get("content", []):
-            if content.get("type") == "output_text":
-                collected.append(content.get("text", ""))
-    return "".join(collected).strip()
-
-
 def build_inputs(prompt: str, system_prompt: str):
     return [
         {
@@ -75,6 +62,77 @@ def build_inputs(prompt: str, system_prompt: str):
     ]
 
 
+def build_messages(prompt: str, system_prompt: str):
+    return [
+        {
+            "role": "system",
+            "content": system_prompt,
+        },
+        {
+            "role": "user",
+            "content": prompt,
+        },
+    ]
+
+
+def build_request_payload(
+    prompt: str,
+    system_prompt: str,
+    *,
+    model: str,
+    max_tokens: int,
+    temperature: float,
+    api_provider: str,
+):
+    if api_provider == "deepseek":
+        return {
+            "model": model,
+            "messages": build_messages(prompt, system_prompt),
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+
+    return {
+        "model": model,
+        "input": build_inputs(prompt, system_prompt),
+        "max_output_tokens": max_tokens,
+        "temperature": temperature,
+    }
+
+
+def extract_text_from_response(payload: dict, api_provider: str) -> str:
+    text = payload.get("output_text")
+    if text:
+        return text.strip()
+
+    collected = []
+    for item in payload.get("output", []):
+        for content in item.get("content", []):
+            if content.get("type") == "output_text":
+                collected.append(content.get("text", ""))
+    if collected:
+        return "".join(collected).strip()
+
+    if api_provider == "deepseek":
+        for choice in payload.get("choices", []):
+            message = choice.get("message", {})
+            if isinstance(message, dict):
+                content = message.get("content")
+                if isinstance(content, list):
+                    return "".join(part.get("text", "") for part in content).strip()
+                if isinstance(content, str):
+                    return content.strip()
+            text_choice = choice.get("text")
+            if text_choice:
+                return text_choice.strip()
+
+    return ""
+
+
+def build_request_url(base_url: str, endpoint: str) -> str:
+    return f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+
+
 def _run_inference_sync(
     prompts,
     *,
@@ -84,6 +142,9 @@ def _run_inference_sync(
     system_prompt,
     request_interval,
     api_key,
+    api_base_url,
+    api_endpoint,
+    api_provider,
     organization_id=None,
     max_retries=3,
     timeout=60.0,
@@ -98,15 +159,17 @@ def _run_inference_sync(
     }
     if organization_id:
         headers["OpenAI-Organization"] = organization_id
-    url = "https://api.openai.com/v1/responses"
+    url = build_request_url(api_base_url, api_endpoint)
 
     for prompt in tqdm(prompts, desc="Querying OpenAI"):
-        body = {
-            "model": model,
-            "input": build_inputs(prompt, system_prompt),
-            "max_output_tokens": max_tokens,
-            "temperature": temperature,
-        }
+        body = build_request_payload(
+            prompt,
+            system_prompt,
+            model=model,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            api_provider=api_provider,
+        )
         success = False
         last_error = None
 
@@ -137,7 +200,9 @@ def _run_inference_sync(
                                 f"{data['error'].get('message', data['error'])}"
                             )
                         else:
-                            outputs.append(extract_text_from_response(data))
+                            outputs.append(
+                                extract_text_from_response(data, api_provider)
+                            )
                             success = True
                             break
 
@@ -170,6 +235,9 @@ async def _run_inference_async(
     system_prompt,
     request_interval,
     api_key,
+    api_base_url,
+    api_endpoint,
+    api_provider,
     organization_id=None,
     max_retries=3,
     timeout=60.0,
@@ -194,19 +262,21 @@ async def _run_inference_async(
     }
     if organization_id:
         headers["OpenAI-Organization"] = organization_id
-    url = "https://api.openai.com/v1/responses"
+    url = build_request_url(api_base_url, api_endpoint)
 
     timeout_cfg = aiohttp.ClientTimeout(total=timeout)
 
     async with aiohttp.ClientSession(headers=headers, timeout=timeout_cfg) as session:
         async def fetch_single(idx, prompt):
             nonlocal error_count
-            body = {
-                "model": model,
-                "input": build_inputs(prompt, system_prompt),
-                "max_output_tokens": max_tokens,
-                "temperature": temperature,
-            }
+            body = build_request_payload(
+                prompt,
+                system_prompt,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                api_provider=api_provider,
+            )
             last_error = None
 
             for attempt in range(1, max_retries + 1):
@@ -238,7 +308,9 @@ async def _run_inference_async(
                                             f"{data['error'].get('message', data['error'])}"
                                         )
                                     else:
-                                        completion = extract_text_from_response(data)
+                                        completion = extract_text_from_response(
+                                            data, api_provider
+                                        )
                                         success = True
                 except (ClientError, asyncio.TimeoutError) as exc:
                     last_error = exc
@@ -278,6 +350,9 @@ def run_inference(
     system_prompt,
     request_interval,
     api_key,
+    api_base_url,
+    api_endpoint,
+    api_provider,
     organization_id=None,
     max_retries=3,
     timeout=60.0,
@@ -296,6 +371,9 @@ def run_inference(
                 system_prompt=system_prompt,
                 request_interval=request_interval,
                 api_key=api_key,
+                api_base_url=api_base_url,
+                api_endpoint=api_endpoint,
+                api_provider=api_provider,
                 organization_id=organization_id,
                 max_retries=max_retries,
                 timeout=timeout,
@@ -313,6 +391,9 @@ def run_inference(
         system_prompt=system_prompt,
         request_interval=request_interval,
         api_key=api_key,
+        api_base_url=api_base_url,
+        api_endpoint=api_endpoint,
+        api_provider=api_provider,
         organization_id=organization_id,
         max_retries=max_retries,
         timeout=timeout,
@@ -380,13 +461,59 @@ def main():
         action="store_true",
         help="Skip automatic evaluation metrics.",
     )
+    parser.add_argument(
+        "--api_provider",
+        default="openai",
+        choices=["openai", "deepseek"],
+        help="Which provider to target for API requests.",
+    )
+    parser.add_argument(
+        "--api_base_url",
+        default=None,
+        help="Override the base URL used for API requests.",
+    )
+    parser.add_argument(
+        "--api_endpoint",
+        default=None,
+        help="Override the endpoint path appended to the base URL.",
+    )
+    parser.add_argument(
+        "--api_key_env",
+        default="OPENAI_API_KEY",
+        help="Environment variable name containing the API key.",
+    )
+    parser.add_argument(
+        "--organization_env",
+        default="",
+        help="Environment variable name containing the organization identifier (optional).",
+    )
 
     args = parser.parse_args()
 
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_provider = args.api_provider
+    if api_provider == "deepseek":
+        default_base_url = "https://api.deepseek.com/v1"
+        default_endpoint = "chat/completions"
+    else:
+        default_base_url = "https://api.openai.com/v1"
+        default_endpoint = "responses"
+
+    api_base_url = (args.api_base_url or default_base_url).rstrip("/")
+    api_endpoint = (args.api_endpoint or default_endpoint).lstrip("/")
+
+    api_key_env = args.api_key_env
+    api_key = os.getenv(api_key_env)
     if not api_key:
-        raise EnvironmentError("OPENAI_API_KEY environment variable must be set.")
-    organization_id = os.getenv("OPENAI_ORGANIZATION_ID")
+        raise EnvironmentError(f"{api_key_env} environment variable must be set.")
+
+    organization_id = None
+    organization_env = args.organization_env.strip()
+    if organization_env:
+        organization_id = os.getenv(organization_env)
+        if not organization_id:
+            raise EnvironmentError(
+                f"{organization_env} environment variable must be set."
+            )
 
     dataset_file = Path("dataset") / args.data_name / f"{args.data_name}_{args.split}.jsonl"
     if not dataset_file.exists():
@@ -409,6 +536,9 @@ def main():
         system_prompt=args.system_prompt,
         request_interval=args.request_interval,
         api_key=api_key,
+        api_base_url=api_base_url,
+        api_endpoint=api_endpoint,
+        api_provider=api_provider,
         organization_id=organization_id,
         max_retries=args.max_retries,
         timeout=args.timeout,

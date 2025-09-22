@@ -1,2 +1,4 @@
 outputs/
 dataset/
+config/api_keys.sh
+config/*.local.sh
